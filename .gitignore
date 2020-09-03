@@ -44,6 +44,3 @@ luac.out
 upload.bat
 run.bat
 terminal.bat
-
-# Secrets
-wifiConfig.lua
