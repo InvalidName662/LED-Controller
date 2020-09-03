@@ -1,8 +1,10 @@
 local config = {}
 
---search for Wifi Config. If nonexistent print an error
-assert(file.exists("wifiConfig.lc"), "Couldnt load 'wifiConfig.lc'. Cannot connect to AP")
-config.wifi = dofile("wifiConfig.lc")
+--Wifi Config
+--Change this to enable UDP control via your Wifi
+config.wifi = {}
+config.wifi.pwd = "Your Password"
+config.wifi.ssid = "Your SSID (Networkname e.g. MyWifi123)"
 
 --LED Config
 config.led = {}
