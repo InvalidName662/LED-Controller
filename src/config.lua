@@ -3,8 +3,8 @@ local config = {}
 --Wifi Config
 --Change this to enable UDP control via your Wifi
 config.wifi = {}
-config.wifi.pwd = "Your Password"
-config.wifi.ssid = "Your SSID (Networkname e.g. MyWifi123)"
+config.wifi.pwd = "Your SSID"
+config.wifi.ssid = "Your Password"
 
 --LED Config
 config.led = {}

@@ -12,43 +12,41 @@ return function(data)
       if (property == "color") then
         local numbers = value:gmatch("%d+")
         local index = 0
-        for number in numbers do
-          number = number:gsub("%s", "")
+        for s in numbers do
+          local number = s:gsub("%s", "")
           if (index == 0) then
             ledconfig.color.r = tonumber(number)
-          elif(index == 1) then
+          elseif(index == 1) then
             ledconfig.color.g = tonumber(number)
-          elif(index == 2) then
+          elseif(index == 2) then
             ledconfig.color.b = tonumber(number)
-          elif(index == 3 and config.led.byteCount == 4) then
+          elseif(index == 3 and config.led.byteCount == 4) then
             ledconfig.color.w = tonumber(number)
           end
           index = index + 1
         end
-      elif (property == "mode") then
+      elseif (property == "mode") then
         ledconfig.mode = value:gsub("%s", "")
-      elif(property == "power") then
+      elseif(property == "power") then
         if (value == "on") then
           ledconfig.power = true
         else
           ledconfig.power = false
         end
-      elif(property == "brightness") then
-        ledconfig.brightness = tonumber(value:gsub("%s", ""))
-      elif(property == "speed") then
-        ledconfig.speed = tonumber(value:gsub("%s", ""))
-      elif(property == "delay") then
-        ledconfig.delay = tonumber(value:gsub("%s", ""))
       else
-        uart.write(0, "None existent property: "..property)
+        local number = value:gsub("%s", "")
+        if(property == "brightness") then
+          ledconfig.brightness = tonumber(number)
+        elseif(property == "speed") then
+          ledconfig.speed = tonumber(number)
+        elseif(property == "delay") then
+          ledconfig.delay = tonumber(number)
+        else
+          uart.write(0, "None existent property: "..property)
+        end
       end
     end
 
-    --Clean up and end
-    firstWhitespace = nil
-    property = nil
-    value = nil
-    collectgarbage()
     return ledconfig
   end
 
@@ -56,47 +54,57 @@ return function(data)
   --Find valid commands
   local commands = data:gmatch("%l+ [%w ]+")
   --Load in the config file
-  local ledconfig = dofile("ledconfig.lua")
+  ledconfig = dofile("ledconfig.lua")
+
   --Iterate over every valid command, change the config and later write it back to its file
-  for command in commands do
+  --Queue this up so watchdog doesnt kick my ass into heaven
+  local timer = tmr.create()
+  timer:alarm(10, tmr.ALARM_AUTO, function()
+    uart.write(0, "Processing next Command...\n")
+    local command = commands()
+    if command == nil then
+      --No more Commands to process, so we write to the config file and finish off
+
+      --Remove old file
+      file.remove("ledconfig.lua")
+      --Create new file
+      local configfile = file.open("ledconfig.lua", "w")
+      configfile:writeline("conf={}")
+      configfile:writeline("conf.color={}")
+      --Iterate over the new config and rewrite values to the new file
+      for k,v in pairs(ledconfig) do
+        if (k == "color") then
+          --Color needs special treatment cause its a table itself
+          for name, value in pairs(v) do
+            configfile:writeline("conf.color."..name.."="..tostring(value))
+          end
+        else
+          --In case of a string we have a special case because it needs "" around it
+          if (type(v) == "string") then
+            configfile:writeline("conf."..k.."=\""..v.."\"")
+          else
+            configfile:writeline("conf."..k.."="..tostring(v))
+          end
+        end
+      end
+      configfile:writeline("return conf")
+      configfile:close()
+      configfile = nil
+
+      --Apply the config
+      applyConfig(ledconfig)
+
+      --Cleanup
+      commands = nil
+      ledconfig = nil
+      timer:unregister()
+      timer = nil
+    else
       local _, firstWhitespace = command:find(" ")
       local type = command:sub(1, firstWhitespace-1)
       local pars = command:sub(firstWhitespace+1, -1)
       ledconfig = processCommand(ledconfig, type, pars)
-  end
-
-  --Write to file
-
-  --Remove old file
-  file.remove("ledconfig.lua")
-  --Create new file
-  file.open("ledconfig.lua")
-  file.writeline("conf={}")
-  --Iterate over the new config and rewrite values to the new file
-  for k,v in pairs(ledconfig) do
-    if (k == "color") then
-      --Color needs special treatment cause its a table itself. There might be a better solution here but in my opinion its not worth searching for it
-      file.writeline("conf.color."..k.."='"..v.."'")
-      file.writeline("conf.color"..k.."='"..v.."'")
-      file.writeline("conf.color"..k.."='"..v.."'")
-      file.writeline("conf.color"..k.."='"..v.."'")
-    else
-      --In case of a string we have a special case because it needs "" around it
-      if (type == "string") then
-        file.writeline("conf."..k.."='"..v.."'")
-      else
-        file.writeline("conf."..k.."="..tostring(v))
-      end
     end
-  end
-  file.writeline("return conf")
-  file.close()
-
-  --Apply Config
-  dofile("applyConfig.lc")(ledconfig)
-
-  --Clean up
-  ledconfig = nil;
-  commands = nil
-  collectgarbage()
+    collectgarbage("collect")
+  end)
 end
