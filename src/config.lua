@@ -10,6 +10,7 @@ config.wifi.ssid = "Your Password"
 config.led = {}
 config.led.ledNum = 150
 config.led.byteCount = 3
+config.led.powerPin = 5
 
 --net config
 config.net = {}

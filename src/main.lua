@@ -21,15 +21,15 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
 )
 
 --Misc
-gpio.mode(5, gpio.OUTPUT)
+gpio.mode(config.led.powerPin, gpio.OUTPUT)
 ws2812.init()
 
 --Apply Config Func
 applyConfig = function(ledconfig)
   if (ledconfig.power) then
-    gpio.write(5, gpio.HIGH)
+    gpio.write(config.led.powerPin, gpio.HIGH)
   else
-    gpio.write(5, gpio.LOW)
+    gpio.write(config.led.powerPin, gpio.LOW)
   end
 
   local buffer = ws2812.newBuffer(config.led.ledNum, config.led.byteCount)

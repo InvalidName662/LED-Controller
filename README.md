@@ -5,7 +5,7 @@ A NodeMCU Programm that can be used to control a Ws2812 LED-Strip via UDP.
 It uses ws2812_effects which is deprecated, but ill update it once they replace it.
 
 # Usage
-Send a UDP Message to the IP and Port specified in your [config file](src/config.lua). 
+Send a UDP Message to the IP and Port specified in your [config file](src/config.lua).
 You'll obviously also need to change the password and ssid there so the NodeMCU can connect to your Network and you can reach it
 You can then send commands which are written in this syntax:
 ```
@@ -40,4 +40,6 @@ Just replace my udpsocket with your whatever. Then do something like this when r
 ```lua
   dofile("processCommand.lc")(input)
 ```
-Genererally you should have a good look at the [config file](src/config.lua) since everything i thaught you might need to change can be changed there
+Genererally you should have a good look at the [config file](src/config.lua) since everything i thaught you might need to change can be changed there\
+The [upload script](upload.bat) only works with the [NodeMCU Tool](https://github.com/AndiDittrich/NodeMCU-Tool) by [Andi Dittrich](https://github.com/AndiDittrich)\
+I heavily recommend it cause its easy to use, is well documented and looks nice. You'll also need to have a firmware with gpio, net, uart, file, wifi, ws2812, ws2812_effects and color_utils. I included a float build to this repo that works so you dont need to build yourself
