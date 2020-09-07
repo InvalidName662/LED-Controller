@@ -26,7 +26,29 @@ return function(data)
           index = index + 1
         end
       elseif (property == "mode") then
-        ledconfig.mode = value:gsub("%s", "")
+        firstWhitespace = value:find(" ")
+        if (firstWhitespace ~= nil) then
+          local modeName = value:sub(1, firstWhitespace-1)
+          ledconfig.mode.mode = modeName
+          local args = value:sub(firstWhitespace+1, -1):gmatch("&d+")
+          local flag = false
+          local result = {}
+          local index = 0
+          for arg in args do
+            flag = true
+            loadstring("result."..tostring(index).."="..arg)()
+            index = index + 1
+          end
+
+          if (flag) then
+            ledconfig.mode.pars=result
+          else
+            ledconfig.mode.pars="321!none!123"
+          end
+        else
+          ledconfig.mode.mode = value
+          ledconfig.mode.pars = "321!none!123"
+        end
       elseif(property == "power") then
         if (value == "on") then
           ledconfig.power = true
@@ -71,6 +93,7 @@ return function(data)
       local configfile = file.open("ledconfig.lua", "w")
       configfile:writeline("conf={}")
       configfile:writeline("conf.color={}")
+      configfile:writeline("conf.mode={}")
       --Iterate over the new config and rewrite values to the new file
       for k,v in pairs(ledconfig) do
         if (k == "color") then
