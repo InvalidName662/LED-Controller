@@ -30,7 +30,7 @@ return function(data)
         if (firstWhitespace ~= nil) then
           local modeName = value:sub(1, firstWhitespace-1)
           ledconfig.mode.mode = modeName
-          local args = value:sub(firstWhitespace+1, -1):gmatch("&d+")
+          local args = value:sub(firstWhitespace+1, -1):gmatch("[%w%c%p]+")
           local flag = false
           local result = {}
           local index = 0
