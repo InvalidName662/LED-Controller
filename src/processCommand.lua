@@ -28,27 +28,32 @@ return function(data)
       elseif (property == "mode") then
         firstWhitespace = value:find(" ")
         if (firstWhitespace ~= nil) then
+          print("Begin")
           local modeName = value:sub(1, firstWhitespace-1)
           ledconfig.mode.mode = modeName
-          local args = value:sub(firstWhitespace+1, -1):gmatch("[%w%c%p]+")
+          local args = value:sub(firstWhitespace+1, -1)
+          args = args:gmatch("[%w%c%p]+")
           local flag = false
-          local result = {}
+          result = {}
           local index = 0
           for arg in args do
             flag = true
-            loadstring("result."..tostring(index).."="..arg)()
+            loadstring("result.a"..tostring(index).."="..arg)()
             index = index + 1
           end
+          print("Test A")
 
           if (flag) then
             ledconfig.mode.pars=result
           else
             ledconfig.mode.pars="321!none!123"
           end
+          result = nil
         else
           ledconfig.mode.mode = value
           ledconfig.mode.pars = "321!none!123"
         end
+        print("Test B")
       elseif(property == "power") then
         if (value == "on") then
           ledconfig.power = true
@@ -82,35 +87,17 @@ return function(data)
   --Queue this up so watchdog doesnt kick my ass into heaven
   local timer = tmr.create()
   timer:alarm(10, tmr.ALARM_AUTO, function()
-    uart.write(0, "Processing next Command...\n")
     local command = commands()
     if command == nil then
       --No more Commands to process, so we write to the config file and finish off
+      uart.write(0,"No more commands found. Saving...\n")
 
       --Remove old file
       file.remove("ledconfig.lua")
       --Create new file
       local configfile = file.open("ledconfig.lua", "w")
-      configfile:writeline("conf={}")
-      configfile:writeline("conf.color={}")
-      configfile:writeline("conf.mode={}")
-      --Iterate over the new config and rewrite values to the new file
-      for k,v in pairs(ledconfig) do
-        if (k == "color") then
-          --Color needs special treatment cause its a table itself
-          for name, value in pairs(v) do
-            configfile:writeline("conf.color."..name.."="..tostring(value))
-          end
-        else
-          --In case of a string we have a special case because it needs "" around it
-          if (type(v) == "string") then
-            configfile:writeline("conf."..k.."=\""..v.."\"")
-          else
-            configfile:writeline("conf."..k.."="..tostring(v))
-          end
-        end
-      end
-      configfile:writeline("return conf")
+      writeTable("conf", ledconfig, configfile)
+      configfile:writeline("return conf;")
       configfile:close()
       configfile = nil
 
@@ -122,7 +109,9 @@ return function(data)
       ledconfig = nil
       timer:unregister()
       timer = nil
+      collectgarbage("collect")
     else
+      uart.write(0, "Processing next Command("..command..")...\n")
       local _, firstWhitespace = command:find(" ")
       local type = command:sub(1, firstWhitespace-1)
       local pars = command:sub(firstWhitespace+1, -1)

@@ -23,9 +23,13 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
 --Misc
 gpio.mode(config.led.powerPin, gpio.OUTPUT)
 ws2812.init()
+effectBuffer = ws2812.newBuffer(config.led.ledNum, config.led.byteCount)
+ws2812_effects.init(effectBuffer)
 
---Apply Config Func
-applyConfig = function(ledconfig)
+--Global Functions
+applyConfig = function(input)
+  ledconfig = input
+  uart.write(0, "Applying config...\n")
   if (ledconfig.power) then
     gpio.write(config.led.powerPin, gpio.HIGH)
   else
@@ -33,23 +37,20 @@ applyConfig = function(ledconfig)
     gpio.write(config.led.powerPin, gpio.LOW)
   end
 
-  local buffer = ws2812.newBuffer(config.led.ledNum, config.led.byteCount)
-
-  if (ledconfig.mode.mode = "static") then
+  if (ledconfig.mode.mode == "static") then
     ws2812_effects.stop()
     if (config.led.byteCount == 3) then
-      buffer:fill(ledconfig.color.g, ledconfig.color.r, ledconfig.color.b)
+      effectBuffer:fill(ledconfig.color.g, ledconfig.color.r, ledconfig.color.b)
     else
-      buffer:fill(ledconfig.color.g, ledconfig.color.r, ledconfig.color.b, ledconfig.color.w)
+      effectBuffer:fill(ledconfig.color.g, ledconfig.color.r, ledconfig.color.b, ledconfig.color.w)
     end
-    ws2812.write(buffer)
+    ws2812.write(effectBuffer)
   else
-    ws2812_effects.init(buffer)
     ws2812_effects.set_speed(ledconfig.speed)
     if (ledconfig.mode.pars == "321!none!123") then
       ws2812_effects.set_mode(ledconfig.mode.mode)
     else
-      code = "ws2812_effects.setmode(ledconfig.mode.mode"
+      code = "ws2812_effects.set_mode(ledconfig.mode.mode"
       for key, value in pairs(ledconfig.mode.pars) do
         code = code..", "..value
       end
@@ -65,24 +66,45 @@ applyConfig = function(ledconfig)
     end
     ws2812_effects.start();
   end
+  uart.write(0, "Done.\n")
+  ledconfig = nil
 end
 
-local ledconfig = dofile("ledconfig.lua")
---print the config for debugging purpose
-local printTable = function(table)
+writeTable = function(name, table, file)
+  uart.write(0, "Writing Table to file("..name..")...\n")
+  file:writeline(name.."={};")
   for k, v in pairs(table) do
     if (type(v) == "table") then
-      print(k.."->")
-      printTable(v)
-      print("End of "..k)
+      writeTable(name.."."..k, v, file)
+    elseif (type(v) == "string") then
+      file:writeline(name.."."..k.."=\""..v.."\";")
     else
-      uart.write(0,k..": "..tostring(v).."\n")
+      file:writeline(name.."."..k.."="..tostring(v)..";")
+    end
+  end
+  uart.write(0, "Done("..name..")\n")
+end
+
+printTable = function(table, intendation)
+  intendation = intendation or ""
+  for k, v in pairs(table) do
+    if (type(v) == "table") then
+      print(intendation..k.."->")
+      printTable(v, intendation.."  ")
+      print(intendation.."End of "..k)
+    else
+      uart.write(0,intendation..k..": "..tostring(v).."\n")
     end
   end
 end
+
+--Load in the ledconfig to print and apply in case of power loss
+local ledconfig = dofile("ledconfig.lua")
+
+--print the config for debugging purpose
 printTable(ledconfig)
 
---Applying the existing config in case of power loss
+--Applying
 applyConfig(ledconfig)
 ledconfig = nil
 collectgarbage("collect")
